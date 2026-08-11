@@ -1,41 +1,41 @@
 [
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "IT0004923998",
   "nota": "BTP 4,75% 01/09/2044",
   "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "IT0005534141",
   "nota": "BTP 4,50% 01/10/2053",
   "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "FR0010870956",
   "nota": "FRANCE 4,00% 25/04/2060",
   "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "ES0000012M93",
   "nota": "SPAIN 4,00% 31/10/2054",
   "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "XS2680932907",
   "nota": "HUNGARY 5,375% 12/09/2033",
   "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 5,
+  "errori_consecutivi": 0,
   "isin": "XS0161100515",
   "nota": "Telecom Italia Finance 7,75% 24/01/2033",
   "ticker": "",
