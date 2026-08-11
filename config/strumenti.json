@@ -1,16 +1,100 @@
 [
- {"isin": "IT0004923998", "ticker": "", "tipo": "bond",   "nota": "BTP 4,75% 01/09/2044"},
- {"isin": "IT0005534141", "ticker": "", "tipo": "bond",   "nota": "BTP 4,50% 01/10/2053"},
- {"isin": "FR0010870956", "ticker": "", "tipo": "bond",   "nota": "FRANCE 4,00% 25/04/2060"},
- {"isin": "ES0000012M93", "ticker": "", "tipo": "bond",   "nota": "SPAIN 4,00% 31/10/2054"},
- {"isin": "XS2680932907", "ticker": "", "tipo": "bond",   "nota": "HUNGARY 5,375% 12/09/2033"},
- {"isin": "XS0161100515", "ticker": "", "tipo": "bond",   "nota": "Telecom Italia Finance 7,75% 24/01/2033"},
- {"isin": "IE00B4ND3602", "ticker": "", "tipo": "etc",    "nota": "iShares Physical Gold ETC"},
- {"isin": "CH1209763130", "ticker": "", "tipo": "etc",    "nota": "21Shares Ethereum Core ETP"},
- {"isin": "CH1199067674", "ticker": "", "tipo": "etc",    "nota": "21Shares Bitcoin Core ETP"},
- {"isin": "IE00BJ5JNY98", "ticker": "", "tipo": "etf",    "nota": "iShares MSCI World Information Technology"},
- {"isin": "IE00BYZK4552", "ticker": "", "tipo": "etf",    "nota": "iShares Automation & Robotics"},
- {"isin": "IE00BFNM3J75", "ticker": "", "tipo": "etf",    "nota": "iShares MSCI World Screened UCITS"},
- {"isin": "BIT:ENEL",     "ticker": "ENEL.MI", "tipo": "azione", "nota": "Enel"},
- {"isin": "BIT:ENI",      "ticker": "ENI.MI",  "tipo": "azione", "nota": "Eni"}
+ {
+  "errori_consecutivi": 1,
+  "isin": "IT0004923998",
+  "nota": "BTP 4,75% 01/09/2044",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 1,
+  "isin": "IT0005534141",
+  "nota": "BTP 4,50% 01/10/2053",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 1,
+  "isin": "FR0010870956",
+  "nota": "FRANCE 4,00% 25/04/2060",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 1,
+  "isin": "ES0000012M93",
+  "nota": "SPAIN 4,00% 31/10/2054",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 1,
+  "isin": "XS2680932907",
+  "nota": "HUNGARY 5,375% 12/09/2033",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 1,
+  "isin": "XS0161100515",
+  "nota": "Telecom Italia Finance 7,75% 24/01/2033",
+  "ticker": "",
+  "tipo": "bond"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "IE00B4ND3602",
+  "nota": "iShares Physical Gold ETC",
+  "ticker": "PHYMF",
+  "tipo": "etc"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "CH1209763130",
+  "nota": "21Shares Ethereum Core ETP",
+  "ticker": "CH1209763130.SG",
+  "tipo": "etc"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "CH1199067674",
+  "nota": "21Shares Bitcoin Core ETP",
+  "ticker": "CH1199067674.SG",
+  "tipo": "etc"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "IE00BJ5JNY98",
+  "nota": "iShares MSCI World Information Technology",
+  "ticker": "WITS.AS",
+  "tipo": "etf"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "IE00BYZK4552",
+  "nota": "iShares Automation & Robotics",
+  "ticker": "RBOT.L",
+  "tipo": "etf"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "IE00BFNM3J75",
+  "nota": "iShares MSCI World Screened UCITS",
+  "ticker": "SNAW.DE",
+  "tipo": "etf"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "BIT:ENEL",
+  "nota": "Enel",
+  "ticker": "ENEL.MI",
+  "tipo": "azione"
+ },
+ {
+  "errori_consecutivi": 0,
+  "isin": "BIT:ENI",
+  "nota": "Eni",
+  "ticker": "ENI.MI",
+  "tipo": "azione"
+ }
 ]
