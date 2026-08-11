@@ -32,6 +32,12 @@ MAX_ERRORI = 10
 # può cablarli. Si legge la pagina e si trova il link della riga giusta.
 STFI_INDICE = "https://www.simpletoolsforinvestors.eu/documentivari.php"
 STFI_RIGA = "Rendimenti e durate calcolati End of Day"
+# Rete di sicurezza: indirizzo verificato funzionante l'11/08/2026. Se il
+# riconoscimento del link nella pagina fallisce si prova questo, e se risponde con
+# un CSV valido la corsa va avanti lo stesso. Quando l'hash cambierà questo darà
+# 404 e resterà solo la strada normale, che è il motivo per cui non ci si affida
+# soltanto a lui.
+STFI_NOTO = "https://www.simpletoolsforinvestors.eu/data/export/99BD23A2F237F8386C1D70B17F5C9ABA.csv"
 
 UA = "Mozilla/5.0 (compatible; listino-prezzi/1.0; +https://github.com/git-alez/listino-prezzi)"
 
@@ -88,17 +94,28 @@ def bond_da_stfi():
     coprono qualunque obbligazione tu aggiunga senza doverla registrare da nessuna
     parte, e in mezzo a migliaia di titoli i tuoi non sono riconoscibili."""
     pagina = http(STFI_INDICE)
+    # Niente ipotesi sulla forma dell'HTML: si spezza la pagina nelle righe della
+    # tabella, in ognuna si tolgono i tag per leggere il testo, e nella riga giusta
+    # si prende il primo collegamento a un .csv, relativo o assoluto che sia.
+    # (La versione precedente pretendeva un indirizzo che iniziasse con /data/export
+    #  e non trovava nulla: era stata scritta guardando la pagina già convertita in
+    #  testo, non l'HTML vero.)
     riga = None
-    for m in re.finditer(r'([^<>]{0,120})</td>\s*<td[^>]*>\s*<a[^>]+href="([^"]+\.csv)"', pagina, re.S):
-        if STFI_RIGA.lower() in m.group(1).lower():
-            riga = m.group(2)
-            break
-    if not riga:                                     # fallback: primo .csv dell'export
-        m = re.search(r'href="([^"]*/data/export/[^"]+\.csv)"', pagina)
+    for tr in re.split(r'<tr\b', pagina, flags=re.I):
+        testo = re.sub(r'<[^>]+>', ' ', tr)
+        if STFI_RIGA.lower() in testo.lower():
+            m = re.search(r'href=["\']([^"\']+\.csv)["\']', tr, re.I)
+            if m:
+                riga = m.group(1)
+                break
+    if not riga:                                     # ripiego: primo .csv dell'export
+        m = re.search(r'href=["\']([^"\']*export[^"\']*\.csv)["\']', pagina, re.I)
         riga = m.group(1) if m else None
     if not riga:
-        raise RuntimeError("link dell'export non trovato nella pagina")
-    url = urllib.parse.urljoin(STFI_INDICE, riga)
+        tutti = re.findall(r'href=["\']([^"\']+\.csv)["\']', pagina, re.I)
+        print(f"  link non riconosciuto nella pagina ({len(pagina)} caratteri, "
+              f"{len(tutti)} link .csv: {tutti[:3]}) — provo l'indirizzo noto")
+    url = urllib.parse.urljoin(STFI_INDICE, riga) if riga else STFI_NOTO
     print(f"  export EOD: {url}")
 
     testo = http(url)
