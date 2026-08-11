@@ -1,18 +1,13 @@
 name: Aggiorna listino prezzi
 
 on:
-  # Due corse nei giorni feriali: mattina presto e dopo la chiusura di Borsa
-  # Italiana. Gli orari sono UTC: d'estate l'Italia è avanti di due ore.
   schedule:
     - cron: "30 6 * * 1-5"
     - cron: "30 16 * * 1-5"
-  # Permette di lanciarlo a mano dalla scheda Actions: serve per il primo collaudo
-  # e ogni volta che si aggiunge uno strumento senza voler aspettare.
   workflow_dispatch:
 
 permissions:
-  contents: write   # per scrivere prezzi.json nel repository
-  actions:  write   # richiesto da keepalive-workflow v2, che usa l'API dei workflow
+  contents: write
 
 jobs:
   aggiorna:
@@ -21,8 +16,6 @@ jobs:
       - name: Scarica il repository
         uses: actions/checkout@v4
         with:
-          # storia completa: il rebase prima del push ha bisogno di qualcosa su cui
-          # riavvolgere, e con la sola ultima revisione fallirebbe.
           fetch-depth: 0
 
       - name: Prepara Python
@@ -31,13 +24,8 @@ jobs:
           python-version: "3.12"
 
       - name: Aggiorna i prezzi
-        id: aggiorna
         run: python scripts/aggiorna.py
 
-      # always(): se lo script esce in errore perché la fonte è giù, i contatori dei
-      # fallimenti sono comunque stati aggiornati su disco e vanno salvati, altrimenti
-      # la dismissione automatica non arriverebbe mai a contare fino a dieci. Il job
-      # resta segnato come fallito, quindi l'email di GitHub parte lo stesso.
       - name: Pubblica le modifiche
         if: always()
         run: |
@@ -48,15 +36,6 @@ jobs:
             echo "Nessuna variazione: niente da pubblicare."
           else
             git commit -m "prezzi $(date -u '+%Y-%m-%d %H:%M UTC')"
-            # Se nel frattempo hai modificato un file dall'interfaccia web, il push
-            # secco fallirebbe: si riallinea e riprova una volta sola.
             git pull --rebase --autostash || true
             git push
           fi
-
-      # GitHub spegne i workflow programmati dopo 60 giorni di inattività del
-      # repository. I commit fatti dai bot non sempre bastano a evitarlo, quindi
-      # si usa un'azione dedicata invece di sperare.
-      - name: Tieni sveglio il workflow
-        if: always()
-        uses: gautamkrishnar/keepalive-workflow@v2
