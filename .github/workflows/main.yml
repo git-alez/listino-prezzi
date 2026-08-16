@@ -27,6 +27,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Prima dei prezzi: il listino assorbe quello che le dashboard hanno chiesto e
+      # lui non copriva. continue-on-error perche' il sensore e' un di piu': se il
+      # worker e' giu' i prezzi devono aggiornarsi lo stesso.
+      - name: Assorbi gli strumenti richiesti (autoespansione)
+        continue-on-error: true
+        env:
+          WORKER_URL: https://proxy-dash.bio-mancini.workers.dev
+          WORKER_TOKEN: ${{ secrets.WORKER_TOKEN }}
+        run: python scripts/ciclo_vita.py
+
       - name: Aggiorna i prezzi
         run: python scripts/aggiorna.py
 
