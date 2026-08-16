@@ -96,5 +96,14 @@
   "nota": "Eni",
   "ticker": "ENI.MI",
   "tipo": "azione"
+ },
+ {
+  "aggiunto": "auto",
+  "dal": "2026-08-16",
+  "errori_consecutivi": 0,
+  "isin": "IE00B4L5Y983",
+  "nota": "aggiunto da richiesta utente",
+  "ticker": "IWDA.L",
+  "tipo": "etf"
  }
 ]
