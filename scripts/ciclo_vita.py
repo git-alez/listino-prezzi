@@ -43,6 +43,17 @@ def _maschera(isin):
     return isin[:2] + "*" * max(0, len(isin) - 2)
 
 
+def _senza_token(testo):
+    """Il token sta nella query string delle chiamate al worker: se finisse in un
+    messaggio d'errore finirebbe anche nei log delle Actions, pubblici quanto il
+    repository. Si oscura sempre, senza fidarsi di come ogni libreria formatta le
+    proprie eccezioni."""
+    t = str(testo)
+    if TOKEN:
+        t = t.replace(TOKEN, "***").replace(urllib.parse.quote(TOKEN), "***")
+    return t
+
+
 def _eta_giorni(v, oggi):
     try:
         primo = datetime.strptime(v.get("primo") or "", "%Y-%m-%d").date()
@@ -136,7 +147,7 @@ def main():
         pendenti = http(f"{WORKER}/pending?token={urllib.parse.quote(TOKEN)}")
     except Exception as e:                           # noqa: BLE001
         # Il sensore giù non deve fermare i prezzi: si riprova alla corsa dopo.
-        print(f"Registro non raggiungibile ({e}): salto l'autoespansione.")
+        print(f"Registro non raggiungibile ({_senza_token(e)}): salto l'autoespansione.")
         return 0
 
     if not isinstance(pendenti, list) or not pendenti:
@@ -173,7 +184,7 @@ def main():
             continue
 
         if len(promossi) >= MAX_PROMOZIONI:
-            print(f"  ..  {isin:14} oltre il tetto di {MAX_PROMOZIONI}, alla prossima corsa")
+            print(f"  ..  {_maschera(isin):14} oltre il tetto di {MAX_PROMOZIONI}, alla prossima corsa")
             continue
 
         try:
@@ -221,7 +232,7 @@ def main():
         except Exception as e:                       # noqa: BLE001
             # Non è grave: alla prossima corsa si ritrovano e vengono saltati come
             # "già noti". Meglio una voce di troppo che una richiesta persa.
-            print(f"Pulizia del registro fallita ({e}): si riproverà.")
+            print(f"Pulizia del registro fallita ({_senza_token(e)}): si riproverà.")
 
     return 0
 
