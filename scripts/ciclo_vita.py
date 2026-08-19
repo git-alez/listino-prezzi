@@ -32,6 +32,23 @@ DISMESSI = os.path.join(QUI, "config", "dismessi.json")
 
 MAX_PROMOZIONI = 20
 GIORNI_MINIMI = 2
+# Oltre questa eta' dalla prima richiesta, un candidato che non e' mai maturato
+# (mai un secondo giorno distinto, o mai un prezzo valido) esce dal registro:
+# altrimenti un codice sbagliato digitato una volta ci resterebbe per sempre,
+# riprovato a ogni corsa senza costrutto.
+SCADENZA_GIORNI = 14
+
+
+def _maschera(isin):
+    return isin[:2] + "*" * max(0, len(isin) - 2)
+
+
+def _eta_giorni(v, oggi):
+    try:
+        primo = datetime.strptime(v.get("primo") or "", "%Y-%m-%d").date()
+    except ValueError:
+        return 0
+    return (oggi - primo).days
 
 UA = "Mozilla/5.0 (compatible; listino-prezzi/2.0; +https://github.com/git-alez/listino-prezzi)"
 WORKER = (os.environ.get("WORKER_URL") or "").rstrip("/")
@@ -129,7 +146,8 @@ def main():
     strumenti = leggi(CONFIG, [])
     dismessi = leggi(DISMESSI, [])
     noti = {s.get("isin") for s in strumenti} | {s.get("isin") for s in dismessi}
-    oggi = datetime.now(timezone.utc).date().isoformat()
+    oggi_data = datetime.now(timezone.utc).date()
+    oggi = oggi_data.isoformat()
 
     print(f"{len(pendenti)} strumenti nel registro.")
     promossi, trattati = [], []
@@ -147,7 +165,11 @@ def main():
 
         # Due giorni distinti: le date di prima e ultima richiesta devono differire.
         if v.get("primo") == v.get("ultimo") or (v.get("conta") or 0) < GIORNI_MINIMI:
-            print(f"  ..  {isin:14} chiesto una volta sola, aspetta")
+            if _eta_giorni(v, oggi_data) >= SCADENZA_GIORNI:
+                trattati.append(isin)
+                print(f"  🗑  {_maschera(isin):14} mai un secondo giorno in {SCADENZA_GIORNI}g, scartato")
+            else:
+                print(f"  ..  {_maschera(isin):14} chiesto una volta sola, aspetta")
             continue
 
         if len(promossi) >= MAX_PROMOZIONI:
@@ -164,9 +186,13 @@ def main():
             if not p or p <= 0:
                 raise RuntimeError("nessun prezzo")
         except Exception as e:                       # noqa: BLE001
-            # Non si tratta: resta nel registro e riproverà. Un titolo che non quota
-            # oggi può quotare domani, e cancellarlo perderebbe la richiesta.
-            print(f"  ERR {isin:14} {e}")
+            # Un titolo che non quota oggi può quotare domani: non si scarta subito.
+            # Solo dopo SCADENZA_GIORNI senza mai un prezzo valido si arrende.
+            if _eta_giorni(v, oggi_data) >= SCADENZA_GIORNI:
+                trattati.append(isin)
+                print(f"  🗑  {_maschera(isin):14} mai un prezzo in {SCADENZA_GIORNI}g, scartato")
+            else:
+                print(f"  ERR {_maschera(isin):14} {e}")
             continue
 
         strumenti.append({
