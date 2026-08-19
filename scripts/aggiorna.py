@@ -221,6 +221,10 @@ def main():
     print("\nAzioni, ETF ed ETC (Yahoo):")
     ok = err = nuovi = 0
     tenuti = []
+    # I contatori si alzano dentro il ciclo, ma se il guasto sia del singolo titolo
+    # o della fonte lo si sa solo alla fine: si tiene com'erano per poterli rimettere.
+    contatori_iniziali = {s.get("isin"): int(s.get("errori_consecutivi") or 0)
+                          for s in strumenti}
     for n_str, s in enumerate(strumenti):
         isin = s.get("isin")
         if not isin:
@@ -274,16 +278,36 @@ def main():
             s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
             err += 1
 
+        # La dismissione si decide dopo il ciclo: qui non si sa ancora se ha
+        # fallito il titolo o la fonte.
+        tenuti.append(s)
+
+    stato["yahoo"] = {"stato": "ok" if ok else "errore", "ok": ok, "errori": err}
+
+    # Una fonte giu' non e' colpa dei titoli che la usano. Senza questa distinzione
+    # cinque giorni di Yahoo irraggiungibile dismetterebbero l'intera lista degli
+    # ETF: provato il 19/08/2026, dieci strumenti su sedici in una sola corsa.
+    # La soglia dei dieci fallimenti serve a togliere chi ha smesso di quotare per
+    # conto suo, non chi non risponde perche' nessuno risponde.
+    bond_giu = stato["bond"]["stato"] != "ok"
+    yahoo_giu = ok == 0 and err > 0
+    if bond_giu or yahoo_giu:
+        quali = ", ".join(q for q, giu in (("obbligazioni", bond_giu), ("Yahoo", yahoo_giu)) if giu)
+        print(f"\nFonte non disponibile ({quali}): i contatori dei titoli che ne "
+              f"dipendono tornano come prima, nessuna dismissione.")
+        for s in tenuti:
+            e_bond = s.get("tipo") == "bond"
+            if (e_bond and bond_giu) or (not e_bond and yahoo_giu):
+                s["errori_consecutivi"] = contatori_iniziali.get(s.get("isin"), 0)
+
+    for s in list(tenuti):
         if int(s.get("errori_consecutivi") or 0) >= MAX_ERRORI:
             s["dismesso_il"] = datetime.now(timezone.utc).date().isoformat()
             s["motivo"] = f"{MAX_ERRORI} corse consecutive senza prezzo"
             dismessi.append(s)
-            prezzi.pop(isin, None)
-            print(f"  DISMESSO {isin}: {s['motivo']}")
-        else:
-            tenuti.append(s)
-
-    stato["yahoo"] = {"stato": "ok" if ok else "errore", "ok": ok, "errori": err}
+            tenuti.remove(s)
+            prezzi.pop(s.get("isin"), None)
+            print(f"  DISMESSO {s.get('isin')}: {s['motivo']}")
 
     # Se è fallito tutto è più probabile un guasto delle fonti che un delisting
     # di massa: in quel caso non si pubblica e il file buono resta dov'è.
