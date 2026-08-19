@@ -105,5 +105,14 @@
   "nota": "aggiunto da richiesta utente",
   "ticker": "IWDA.L",
   "tipo": "etf"
+ },
+ {
+  "aggiunto": "auto",
+  "dal": "2026-08-19",
+  "errori_consecutivi": 0,
+  "isin": "ENEL.MI",
+  "nota": "aggiunto da richiesta utente",
+  "ticker": "ENEL.MI",
+  "tipo": "etf"
  }
 ]
