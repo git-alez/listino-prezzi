@@ -18,13 +18,8 @@ Se il worker non risponde lo script esce in silenzio con successo — l'aggiorna
 dei prezzi non deve fermarsi perché il sensore è giù.
 """
 
-import json, os, re, sys, time, urllib.request, urllib.parse
+import json, os, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timezone
-
-# Stessa forma riconosciuta dal worker: due lettere di paese, nove alfanumerici, una
-# cifra di controllo. Serve un controllo stretto perché tutto ciò che non è un ISIN
-# viene preso per un ticker, e un codice storpiato entrerebbe nel listino come tale.
-ISIN = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(QUI, "config", "strumenti.json")
@@ -100,67 +95,30 @@ def salva(percorso, dati):
     os.replace(tmp, percorso)
 
 
-def prezzo_yahoo(simbolo):
-    d = http("https://query1.finance.yahoo.com/v8/finance/chart/"
-             + urllib.parse.quote(simbolo) + "?range=5d&interval=1d")
-    res = ((d.get("chart") or {}).get("result") or [None])[0]
-    if not res:
-        return None, None
-    meta = res.get("meta") or {}
-    p = meta.get("regularMarketPrice")
-    if p is None:
-        chiusure = [x for x in (((res.get("indicators") or {}).get("quote")
-                                 or [{}])[0]).get("close") or [] if x is not None]
-        p = chiusure[-1] if chiusure else None
-    return p, (meta.get("currency") or "EUR")
 
+def dal_worker(chiave):
+    """Prezzo e natura di uno strumento, chiesti al worker. (p, valuta, tipo, simbolo).
 
-def da_francoforte(isin):
-    """Prezzo e natura dello strumento da Borsa di Francoforte, per ISIN diretto.
+    Il worker sa gia' fare tutto questo: prende l'ISIN diretto su Francoforte, ripiega
+    su Yahoo per i ticker, tiene in cache i simboli risolti. Reimplementarlo qui
+    significava tenere allineate due copie della stessa euristica in due linguaggi, e
+    prima o poi divergono. Nessun legame nuovo: questo script parla gia' col worker
+    per leggere il registro.
 
-    Serve a due cose che Yahoo non sa fare: conosce le obbligazioni europee (Yahoo
-    no, provati 5 ISIN reali il 20/08/2026, 0 su 5) e dice se il titolo quota in
-    percentuale del nominale, cioè se è un bond. Senza quest'ultima informazione il
-    tipo veniva scritto "etf" a caso, e un bond marchiato etf manda aggiorna.py a
-    interrogare Yahoo per un titolo che Yahoo non ha.
-
-    Non solleva mai: se tace si torna a Yahoo, cioè al comportamento precedente.
-    Nota: provata dagli IP di Cloudflare, non ancora da quelli di GitHub Actions —
-    se qui blocca, il registro della corsa lo dirà e si resta su Yahoo.
+    registra=0 e' obbligatorio, non un'ottimizzazione: senza, chiedere il prezzo di un
+    candidato ne aggiornerebbe la data di ultima richiesta, e il filtro dei due giorni
+    distinti passerebbe da solo per chiunque — il sensore misurerebbe se stesso.
     """
     try:
-        d = http("https://api.boerse-frankfurt.de/v1/data/quote_box/single?isin="
-                 + urllib.parse.quote(isin))
+        d = http(f"{WORKER}/prezzo?isin={urllib.parse.quote(chiave)}&registra=0")
     except Exception:                                # noqa: BLE001
-        return None, None, None
-    p = d.get("lastPrice") if isinstance(d, dict) else None
-    if not isinstance(p, (int, float)) or p <= 0:
-        return None, None, None
-    # XFRA quota tutto in euro, titoli esteri compresi: la valuta è nota per costruzione.
-    return p, "EUR", ("bond" if d.get("nominal") is True else None)
-
-
-def cerca_simbolo(chiave):
-    """Stessa preferenza di aggiorna.py: prima Milano, poi le altre piazze europee."""
-    if not ISIN.match(chiave):
-        # Non è un ISIN: o è un ticker scritto a mano nella dashboard, o è un codice
-        # storpiato. Si accetta come ticker solo se ha la forma di un ticker; la
-        # prova del prezzo, subito dopo, scarta comunque quelli inventati.
-        return chiave if re.match(r"^[A-Z0-9]{1,6}(\.[A-Z]{1,3})?$", chiave) else None
-    d = http("https://query2.finance.yahoo.com/v1/finance/search?q="
-             + urllib.parse.quote(chiave))
-    q = [x for x in (d.get("quotes") or []) if x.get("symbol")]
-    if not q:
-        return None
-    def punteggio(x):
-        s = x["symbol"]
-        if s.endswith(".MI"):
-            return 0
-        if s.endswith((".DE", ".PA", ".AS", ".L", ".SW")):
-            return 1
-        return 2
-    q.sort(key=punteggio)
-    return q[0]["symbol"]
+        return None, None, None, None
+    rec = (d or [None])[0] if isinstance(d, list) else None
+    if not rec or not isinstance(rec.get("prezzo"), (int, float)) or rec["prezzo"] <= 0:
+        return None, None, None, None
+    # "percentuale" significa quotato in percentuale del nominale, cioe' obbligazione.
+    return (rec["prezzo"], rec.get("ccy") or "EUR",
+            ("bond" if rec.get("percentuale") else None), rec.get("simbolo") or "")
 
 
 def main():
@@ -220,29 +178,20 @@ def main():
             continue
 
         try:
-            # Francoforte per prima quando la chiave e' un ISIN: prende l'ISIN diretto,
-            # quindi niente ricerca del simbolo da indovinare, e conosce i bond.
-            tipo = None
-            p = ccy = sim = None
-            if ISIN.match(isin):
-                p, ccy, tipo = da_francoforte(isin)
+            # Una domanda sola al worker: sa lui quale fonte interrogare e come
+            # risolvere il simbolo, e la sua risposta dice anche se e' un'obbligazione.
+            p, ccy, tipo, sim = dal_worker(isin)
             if not p:
-                sim = cerca_simbolo(isin)
-                time.sleep(0.7)                      # non martellare la fonte
-                if not sim:
-                    raise RuntimeError("nessun simbolo")
-                p, ccy = prezzo_yahoo(sim)
-                time.sleep(0.7)
-            if not p or p <= 0:
-                raise RuntimeError("nessun prezzo")
+                raise RuntimeError("nessun prezzo da nessuna fonte")
             # Il simbolo serve ad aggiorna.py per le corse successive, ma solo per cio'
             # che passa da Yahoo: i bond li prende dall'export e le loro voci in elenco
             # hanno infatti ticker vuoto. Quindi non si cerca per i bond, e quando la
             # ricerca non trova nulla si scrive "" invece di lasciare None.
-            if not sim and tipo != "bond":
-                sim = cerca_simbolo(isin)
-                time.sleep(0.7)
-            sim = sim or ""
+            # Il simbolo lo dice il worker: e' vuoto quando ha risposto Francoforte,
+            # che lavora per ISIN e un ticker non lo usa. Va bene per due motivi
+            # diversi: i bond il ticker non devono averlo affatto (aggiorna.py li
+            # prende dall'export), e per gli altri lo riempie aggiorna.py stessa alla
+            # prima corsa, che e' la sola a sapere quale simbolo Yahoo le serve.
             # Stesso strumento gia' coperto sotto un'altra chiave: e' il caso di
             # "ENEL.MI" contro "BIT:ENEL". Si segna come trattato — la richiesta ha
             # avuto la sua risposta — ma non si aggiunge una seconda voce.
