@@ -1,9 +1,13 @@
 {
- "aggiornato_al": "2026-08-20T20:55:33+00:00",
+ "aggiornato_al": "2026-08-20T21:16:10+00:00",
  "fonti": {
   "bond": {
    "stato": "ok",
    "titoli": 1322
+  },
+  "francoforte": {
+   "salvati": 0,
+   "stato": "ok"
   },
   "yahoo": {
    "errori": 0,
