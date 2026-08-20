@@ -2,7 +2,7 @@
 """
 Costruisce prezzi.json: il listino pubblico letto dalla dashboard.
 
-Due fonti, perché nessuna copre tutto:
+Due fonti, perch√© nessuna copre tutto:
 - obbligazioni: l'export CSV di fine giornata di simpletoolsforinvestors.eu, che
   contiene i titoli quotati su Borsa Italiana con prezzo, rendimento e duration;
 - azioni, ETF ed ETC: l'endpoint pubblico di Yahoo Finance.
@@ -29,13 +29,13 @@ USCITA = os.path.join(QUI, "prezzi.json")
 MAX_ERRORI = 10
 
 # Pagina indice dell'export: i link contengono un hash che cambia, quindi non si
-# può cablarli. Si legge la pagina e si trova il link della riga giusta.
+# pu√≤ cablarli. Si legge la pagina e si trova il link della riga giusta.
 STFI_INDICE = "https://www.simpletoolsforinvestors.eu/documentivari.php"
 STFI_RIGA = "Rendimenti e durate calcolati End of Day"
 # Rete di sicurezza: indirizzo verificato funzionante l'11/08/2026. Se il
 # riconoscimento del link nella pagina fallisce si prova questo, e se risponde con
-# un CSV valido la corsa va avanti lo stesso. Quando l'hash cambierà questo darà
-# 404 e resterà solo la strada normale, che è il motivo per cui non ci si affida
+# un CSV valido la corsa va avanti lo stesso. Quando l'hash cambier√† questo dar√†
+# 404 e rester√† solo la strada normale, che √® il motivo per cui non ci si affida
 # soltanto a lui.
 STFI_NOTO = "https://www.simpletoolsforinvestors.eu/data/export/99BD23A2F237F8386C1D70B17F5C9ABA.csv"
 
@@ -43,7 +43,7 @@ UA = "Mozilla/5.0 (compatible; listino-prezzi/1.0; +https://github.com/git-alez/
 
 
 def http(url, tentativi=3, testo=True):
-    """GET con qualche tentativo: un errore di rete non deve buttare giù la corsa."""
+    """GET con qualche tentativo: un errore di rete non deve buttare gi√π la corsa."""
     ultimo = None
     for n in range(tentativi):
         try:
@@ -98,7 +98,7 @@ def bond_da_stfi():
     # tabella, in ognuna si tolgono i tag per leggere il testo, e nella riga giusta
     # si prende il primo collegamento a un .csv, relativo o assoluto che sia.
     # (La versione precedente pretendeva un indirizzo che iniziasse con /data/export
-    #  e non trovava nulla: era stata scritta guardando la pagina già convertita in
+    #  e non trovava nulla: era stata scritta guardando la pagina gi√† convertita in
     #  testo, non l'HTML vero.)
     riga = None
     for tr in re.split(r'<tr\b', pagina, flags=re.I):
@@ -114,7 +114,7 @@ def bond_da_stfi():
     if not riga:
         tutti = re.findall(r'href=["\']([^"\']+\.csv)["\']', pagina, re.I)
         print(f"  link non riconosciuto nella pagina ({len(pagina)} caratteri, "
-              f"{len(tutti)} link .csv: {tutti[:3]}) — provo l'indirizzo noto")
+              f"{len(tutti)} link .csv: {tutti[:3]}) ‚Äî provo l'indirizzo noto")
     url = urllib.parse.urljoin(STFI_INDICE, riga) if riga else STFI_NOTO
     print(f"  export EOD: {url}")
 
@@ -141,7 +141,7 @@ def bond_da_stfi():
             d = f"{a}-{m_}-{g}"
         rec = {"p": round(p, 4), "d": d, "src": "stfi",
                "ccy": (c[idx["currencycode"]].strip() if "currencycode" in idx else "EUR") or "EUR"}
-        # Rendimento e duration già calcolati: la dashboard li usa in Analisi obbligazioni
+        # Rendimento e duration gi√† calcolati: la dashboard li usa in Analisi obbligazioni
         if "grossytm" in idx:
             v = num(c[idx["grossytm"]])
             if v is not None:
@@ -190,6 +190,34 @@ def prezzo_yahoo(ticker):
     return float(p), data, valuta
 
 
+def oggi_iso():
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def da_francoforte(isin):
+    """Prezzo per ISIN diretto dalla Borsa di Francoforte. (p, valuta, e_bond) oppure
+    (None, None, None).
+
+    E' la rete quando Yahoo tace. Vale la pena perche' fallisce in modo indipendente:
+    il 19/08/2026 Yahoo irraggiungibile ha portato dieci strumenti su sedici a un passo
+    dalla dismissione, e una seconda fonte avrebbe evitato di contare quegli errori.
+    Prende l'ISIN diretto, quindi non serve indovinare il ticker, e conosce le
+    obbligazioni europee che Yahoo non ha.
+
+    Non solleva mai: senza risposta si torna al comportamento precedente.
+    """
+    try:
+        d = http_json("https://api.boerse-frankfurt.de/v1/data/quote_box/single?isin="
+                      + urllib.parse.quote(isin))
+    except Exception:                                # noqa: BLE001
+        return None, None, None
+    p = d.get("lastPrice") if isinstance(d, dict) else None
+    if not isinstance(p, (int, float)) or p <= 0:
+        return None, None, None
+    # XFRA quota tutto in euro, titoli esteri compresi: la valuta e' nota per costruzione.
+    return p, "EUR", d.get("nominal") is True
+
+
 def plausibile(p, tipo):
     if p is None or p <= 0:
         return False
@@ -206,8 +234,18 @@ def main():
     prezzi = dict(vecchio.get("prezzi") or {})
     stato = {}
 
+    # --- la rete risponde da qui? ------------------------------------------
+    # Francoforte e' stata provata da un IP residenziale e dagli IP di Cloudflare, non
+    # da quelli di GitHub Actions: e' proprio il blocco degli IP datacenter ad aver
+    # costretto la dashboard a passare da un proxy per Yahoo. Una richiesta sola in
+    # testa alla corsa lo dice a ogni giro, senza aspettare che serva davvero.
+    p_prova, _, _ = da_francoforte("IT0004923998")
+    stato["francoforte"] = {"stato": "ok" if p_prova else "errore"}
+    print(f"Rete di riserva (Francoforte): "
+          f"{'raggiungibile, ' + str(p_prova) if p_prova else 'NON raggiungibile da qui'}")
+
     # --- obbligazioni: una sola richiesta per tutte -------------------------
-    print("Obbligazioni (export EOD simpletoolsforinvestors):")
+    print("\nObbligazioni (export EOD simpletoolsforinvestors):")
     try:
         bond = bond_da_stfi()
         prezzi.update(bond)
@@ -215,11 +253,12 @@ def main():
         print(f"  {len(bond)} obbligazioni pubblicate")
     except Exception as e:                           # noqa: BLE001
         stato["bond"] = {"stato": "errore", "msg": str(e)}
-        print(f"  ERRORE: {e} — restano i prezzi della corsa precedente")
+        print(f"  ERRORE: {e} ‚Äî restano i prezzi della corsa precedente")
 
     # --- il resto, uno per uno --------------------------------------------
     print("\nAzioni, ETF ed ETC (Yahoo):")
-    ok = err = nuovi = 0
+    ok = err = nuovi = salvati = 0
+    con_prezzo = set()          # salvati dalla rete: hanno un prezzo, non sono in avaria
     tenuti = []
     # I contatori si alzano dentro il ciclo, ma se il guasto sia del singolo titolo
     # o della fonte lo si sa solo alla fine: si tiene com'erano per poterli rimettere.
@@ -231,16 +270,29 @@ def main():
             continue
         tipo = s.get("tipo") or "azione"
 
-        # I bond arrivano dall'export: se sono già lì non si interroga Yahoo, che
+        # I bond arrivano dall'export: se sono gi√† l√¨ non si interroga Yahoo, che
         # per le obbligazioni europee non ha nulla e li farebbe dismettere a torto.
         if tipo == "bond":
             if isin in prezzi:
                 s["errori_consecutivi"] = 0
                 print(f"  ok  {isin:14} (export)      {prezzi[isin]['p']:>10}")
             else:
-                s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
-                print(f"  --  {isin:14} non presente nell'export "
-                      f"(fallimenti di fila: {s['errori_consecutivi']})")
+                # Solo i bond in elenco, non i milletrecento dell'export: se la fonte
+                # dei bond cade si pubblica quello che c'era prima (piu' sotto), non si
+                # aprono milletrecento richieste una per una.
+                p_f, ccy_f, _ = da_francoforte(isin)
+                time.sleep(0.4)
+                if plausibile(p_f, tipo):
+                    prezzi[isin] = {"p": round(p_f, 4), "d": oggi_iso(),
+                                    "src": "francoforte", "ccy": ccy_f}
+                    s["errori_consecutivi"] = 0
+                    salvati += 1
+                    con_prezzo.add(isin)
+                    print(f"  ok  {isin:14} (Francoforte) {p_f:>10.4f} {ccy_f}")
+                else:
+                    s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
+                    print(f"  --  {isin:14} ne' export ne' Francoforte "
+                          f"(fallimenti di fila: {s['errori_consecutivi']})")
             tenuti.append(s)
             continue
 
@@ -259,6 +311,7 @@ def main():
             except Exception as e:                   # noqa: BLE001
                 print(f"  ricerca fallita {isin}: {e}")
 
+        motivo = None
         if s.get("ticker"):
             try:
                 p, data, valuta = prezzo_yahoo(s["ticker"])
@@ -267,22 +320,41 @@ def main():
                     s["errori_consecutivi"] = 0
                     ok += 1
                     print(f"  ok  {isin:14} {s['ticker']:14} {p:>12.4f} {valuta} ({data})")
-                else:
-                    raise RuntimeError(f"valore non plausibile: {p}")
+                    tenuti.append(s)
+                    continue
+                motivo = f"valore non plausibile: {p}"
             except Exception as e:                   # noqa: BLE001
-                s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
-                err += 1
-                print(f"  ERR {isin:14} {s.get('ticker','—'):14} {e}  "
-                      f"(fallimenti di fila: {s['errori_consecutivi']})")
+                motivo = str(e)
+        else:
+            motivo = "nessun ticker"
+
+        # Yahoo non ha risposto: si prova la rete prima di segnare un fallimento.
+        # Il conteggio degli errori di Yahoo (err) si alza comunque, perche' e' quello
+        # che piu' sotto distingue "e' caduta la fonte" da "e' morto il titolo": se lo
+        # azzerassimo qui, una giornata di Yahoo giu' passerebbe per normale e la
+        # protezione contro le dismissioni di massa non scatterebbe.
+        err += 1
+        p_f, ccy_f, _ = da_francoforte(isin)
+        time.sleep(0.4)
+        if plausibile(p_f, tipo):
+            prezzi[isin] = {"p": round(p_f, 4), "d": oggi_iso(),
+                            "src": "francoforte", "ccy": ccy_f}
+            s["errori_consecutivi"] = 0
+            salvati += 1
+            con_prezzo.add(isin)
+            print(f"  ok  {isin:14} {'(Francoforte)':14} {p_f:>12.4f} {ccy_f}  "
+                  f"[Yahoo: {motivo}]")
         else:
             s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
-            err += 1
+            print(f"  ERR {isin:14} {s.get('ticker','‚Äî'):14} {motivo}  "
+                  f"(fallimenti di fila: {s['errori_consecutivi']})")
 
         # La dismissione si decide dopo il ciclo: qui non si sa ancora se ha
         # fallito il titolo o la fonte.
         tenuti.append(s)
 
     stato["yahoo"] = {"stato": "ok" if ok else "errore", "ok": ok, "errori": err}
+    stato["francoforte"]["salvati"] = salvati
 
     # Una fonte giu' non e' colpa dei titoli che la usano. Senza questa distinzione
     # cinque giorni di Yahoo irraggiungibile dismetterebbero l'intera lista degli
@@ -296,6 +368,11 @@ def main():
         print(f"\nFonte non disponibile ({quali}): i contatori dei titoli che ne "
               f"dipendono tornano come prima, nessuna dismissione.")
         for s in tenuti:
+            # Chi e' stato servito dalla rete un prezzo ce l'ha: la sua serie di
+            # fallimenti e' interrotta davvero, e rimettergli il contatore di prima
+            # lo riporterebbe verso una dismissione che non ha piu' motivo.
+            if s.get("isin") in con_prezzo:
+                continue
             e_bond = s.get("tipo") == "bond"
             if (e_bond and bond_giu) or (not e_bond and yahoo_giu):
                 s["errori_consecutivi"] = contatori_iniziali.get(s.get("isin"), 0)
@@ -309,8 +386,8 @@ def main():
             prezzi.pop(s.get("isin"), None)
             print(f"  DISMESSO {s.get('isin')}: {s['motivo']}")
 
-    # Se è fallito tutto è più probabile un guasto delle fonti che un delisting
-    # di massa: in quel caso non si pubblica e il file buono resta dov'è.
+    # Se √® fallito tutto √® pi√π probabile un guasto delle fonti che un delisting
+    # di massa: in quel caso non si pubblica e il file buono resta dov'√®.
     if ok == 0 and stato["bond"]["stato"] != "ok":
         print("\nNessuna fonte ha risposto: prezzi.json NON viene toccato.")
         salva(CONFIG, tenuti)
