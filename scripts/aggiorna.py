@@ -27,6 +27,12 @@ USCITA = os.path.join(QUI, "prezzi.json")
 # Oltre questa soglia di corse fallite di fila lo strumento esce dal listino.
 # 10 corse ~ una settimana di borsa con due esecuzioni al giorno.
 MAX_ERRORI = 10
+# Scarto oltre il quale due fonti sullo stesso titolo meritano un'occhiata. Largo di
+# proposito: fra il MOT e Francoforte mezzo punto di differenza e' normale (sono due
+# libri d'ordini diversi), e un allarme che suona ogni giorno non lo guarda piu'
+# nessuno. Serve a scoprire il prezzo sbagliato di brutto, non la differenza di piazza.
+SCARTO_MAX = 3.0
+ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 
 # Pagina indice dell'export: i link contengono un hash che cambia, quindi non si
 # può cablarli. Si legge la pagina e si trova il link della riga giusta.
@@ -252,10 +258,12 @@ def main():
     print("\nObbligazioni (export EOD simpletoolsforinvestors):")
     try:
         bond = bond_da_stfi()
+        chiavi_bond = set(bond)
         prezzi.update(bond)
         stato["bond"] = {"stato": "ok", "titoli": len(bond)}
         print(f"  {len(bond)} obbligazioni pubblicate")
     except Exception as e:                           # noqa: BLE001
+        chiavi_bond = set()
         stato["bond"] = {"stato": "errore", "msg": str(e)}
         print(f"  ERRORE: {e} — restano i prezzi della corsa precedente")
 
@@ -400,6 +408,54 @@ def main():
         salva(CONFIG, tenuti)
         salva(DISMESSI, dismessi)
         return 1
+
+    # ---- secondo parere ---------------------------------------------------
+    # Un prezzo sbagliato ma verosimile e' il difetto che non si vede: plausibile()
+    # accorge solo i numeri assurdi (uno zero, un milione), non un titolo rimasto
+    # indietro di giorni o preso dalla piazza sbagliata. Con due fonti indipendenti si
+    # puo' chiedere un secondo parere e dirlo, senza mai bloccare la pubblicazione:
+    # un controllo che puo' rifiutare i prezzi diventa lui stesso una causa di guasto.
+    sospetti = []
+    for s in tenuti:
+        isin = s.get("isin")
+        rec = prezzi.get(isin)
+        # Niente prezzo, o gia' servito da Francoforte: confrontarla con se stessa
+        # non direbbe niente. E i BIT:ENEL non sono ISIN, Francoforte non li prende.
+        if not rec or rec.get("src") == "francoforte" or not ISIN_RE.match(isin or ""):
+            continue
+        p_f, ccy_f, _, _ = da_francoforte(isin)
+        time.sleep(0.4)
+        # Valute diverse: WITS vale 20,575 dollari ad Amsterdam e 17,61 euro a
+        # Francoforte, ed e' lo stesso titolo. Convertire per un controllo diagnostico
+        # vorrebbe dire dipendere da un cambio: meglio saltare e dirlo.
+        if not p_f or ccy_f != rec.get("ccy"):
+            continue
+        scarto = abs(p_f - rec["p"]) / rec["p"] * 100
+        if scarto > SCARTO_MAX:
+            sospetti.append((isin, rec["p"], p_f, scarto))
+    stato["controllo"] = {"sospetti": len(sospetti)}
+    if sospetti:
+        print(f"\nDa guardare — {len(sospetti)} prezzi che le due fonti raccontano diversi:")
+        for isin, p1, p2, sc in sospetti:
+            print(f"  ?   {isin:14} listino {p1:>10} / Francoforte {p2:>10}  ({sc:.1f}%)")
+
+    # Il listino porta avanti le chiavi della corsa precedente, e nulla le toglieva
+    # mai: uno strumento cancellato da strumenti.json lasciava il suo ultimo prezzo
+    # congelato per sempre, con la data ferma al giorno in cui era sparito. Non e' un
+    # errore visibile — il numero c'e' e sembra un prezzo qualunque — ed e' proprio
+    # per questo che va tolto.
+    # La condizione sull'export non e' prudenza esagerata: senza, una giornata di
+    # simpletools irraggiungibile renderebbe "non legittime" tutte e milletrecento le
+    # obbligazioni in un colpo solo.
+    if stato["bond"]["stato"] == "ok":
+        leciti = chiavi_bond | {s.get("isin") for s in tenuti}
+        orfani = [k for k in prezzi if k not in leciti]
+        for k in orfani:
+            del prezzi[k]
+        if orfani:
+            print(f"\nTolte {len(orfani)} chiavi orfane (non piu' in elenco): "
+                  f"{', '.join(sorted(orfani)[:8])}"
+                  f"{' ...' if len(orfani) > 8 else ''}")
 
     salva(USCITA, {
         "aggiornato_al": datetime.now(timezone.utc).isoformat(timespec="seconds"),
