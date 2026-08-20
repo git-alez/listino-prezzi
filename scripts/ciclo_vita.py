@@ -226,7 +226,6 @@ def main():
             p = ccy = sim = None
             if ISIN.match(isin):
                 p, ccy, tipo = da_francoforte(isin)
-                time.sleep(0.4)
             if not p:
                 sim = cerca_simbolo(isin)
                 time.sleep(0.7)                      # non martellare la fonte

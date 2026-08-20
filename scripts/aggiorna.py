@@ -270,7 +270,10 @@ def main():
     # --- il resto, uno per uno --------------------------------------------
     print("\nAzioni, ETF ed ETC (Yahoo):")
     ok = err = nuovi = salvati = 0
-    con_prezzo = set()          # salvati dalla rete: hanno un prezzo, non sono in avaria
+    # Chi ha ricevuto un prezzo NUOVO in questa corsa. Serve a due cose: non
+    # ripristinare il contatore di fallimenti a chi un prezzo l'ha avuto davvero, e
+    # contare in fondo quanti stanno servendo un valore vecchio riportato avanti.
+    aggiornati = set()
     tenuti = []
     # I contatori si alzano dentro il ciclo, ma se il guasto sia del singolo titolo
     # o della fonte lo si sa solo alla fine: si tiene com'erano per poterli rimettere.
@@ -285,21 +288,21 @@ def main():
         # I bond arrivano dall'export: se sono già lì non si interroga Yahoo, che
         # per le obbligazioni europee non ha nulla e li farebbe dismettere a torto.
         if tipo == "bond":
-            if isin in prezzi:
+            if isin in chiavi_bond:
                 s["errori_consecutivi"] = 0
+                aggiornati.add(isin)
                 print(f"  ok  {isin:14} (export)      {prezzi[isin]['p']:>10}")
             else:
                 # Solo i bond in elenco, non i milletrecento dell'export: se la fonte
                 # dei bond cade si pubblica quello che c'era prima (piu' sotto), non si
                 # aprono milletrecento richieste una per una.
                 p_f, ccy_f, _, data_f = da_francoforte(isin)
-                time.sleep(0.4)
                 if plausibile(p_f, tipo):
                     prezzi[isin] = {"p": round(p_f, 4), "d": data_f,
                                     "src": "francoforte", "ccy": ccy_f}
                     s["errori_consecutivi"] = 0
                     salvati += 1
-                    con_prezzo.add(isin)
+                    aggiornati.add(isin)
                     print(f"  ok  {isin:14} (Francoforte) {p_f:>10.4f} {ccy_f}")
                 else:
                     s["errori_consecutivi"] = int(s.get("errori_consecutivi") or 0) + 1
@@ -309,7 +312,11 @@ def main():
             continue
 
         if n_str:
-            time.sleep(0.7)                          # non martellare la fonte
+            # Questa resta: Yahoo un freno ce l'ha davvero, ed e' il motivo per cui
+            # tutta questa architettura passa da un proxy. Le pause dopo Francoforte
+            # invece sono state tolte: misurate 20 richieste in parallelo in 441 ms
+            # senza un accenno di limite.
+            time.sleep(0.7)
 
         if not s.get("ticker"):
             try:
@@ -331,6 +338,7 @@ def main():
                     prezzi[isin] = {"p": round(p, 4), "d": data, "src": "yahoo", "ccy": valuta}
                     s["errori_consecutivi"] = 0
                     ok += 1
+                    aggiornati.add(isin)
                     print(f"  ok  {isin:14} {s['ticker']:14} {p:>12.4f} {valuta} ({data})")
                     tenuti.append(s)
                     continue
@@ -347,13 +355,12 @@ def main():
         # protezione contro le dismissioni di massa non scatterebbe.
         err += 1
         p_f, ccy_f, _, data_f = da_francoforte(isin)
-        time.sleep(0.4)
         if plausibile(p_f, tipo):
             prezzi[isin] = {"p": round(p_f, 4), "d": data_f,
                             "src": "francoforte", "ccy": ccy_f}
             s["errori_consecutivi"] = 0
             salvati += 1
-            con_prezzo.add(isin)
+            aggiornati.add(isin)
             print(f"  ok  {isin:14} {'(Francoforte)':14} {p_f:>12.4f} {ccy_f}  "
                   f"[Yahoo: {motivo}]")
         else:
@@ -367,6 +374,12 @@ def main():
 
     stato["yahoo"] = {"stato": "ok" if ok else "errore", "ok": ok, "errori": err}
     stato["francoforte"]["salvati"] = salvati
+    # "yahoo.errori" dice quante volte Yahoo ha taciuto, ed e' vero — ma chi legge il
+    # listino vuole sapere un'altra cosa: quali prezzi non sono stati rinfrescati oggi.
+    # Contare quelli SENZA prezzo non serve: il file riporta avanti il valore vecchio,
+    # quindi un prezzo c'e' quasi sempre — ed e' proprio il prezzo vecchio spacciato
+    # per buono il difetto che vogliamo far vedere, non l'assenza.
+    stato["non_aggiornati"] = sum(1 for s in tenuti if s.get("isin") not in aggiornati)
 
     # Una fonte giu' non e' colpa dei titoli che la usano. Senza questa distinzione
     # cinque giorni di Yahoo irraggiungibile dismetterebbero l'intera lista degli
@@ -383,7 +396,7 @@ def main():
             # Chi e' stato servito dalla rete un prezzo ce l'ha: la sua serie di
             # fallimenti e' interrotta davvero, e rimettergli il contatore di prima
             # lo riporterebbe verso una dismissione che non ha piu' motivo.
-            if s.get("isin") in con_prezzo:
+            if s.get("isin") in aggiornati:
                 continue
             e_bond = s.get("tipo") == "bond"
             if (e_bond and bond_giu) or (not e_bond and yahoo_giu):
@@ -424,7 +437,6 @@ def main():
         if not rec or rec.get("src") == "francoforte" or not ISIN_RE.match(isin or ""):
             continue
         p_f, ccy_f, _, _ = da_francoforte(isin)
-        time.sleep(0.4)
         # Valute diverse: WITS vale 20,575 dollari ad Amsterdam e 17,61 euro a
         # Francoforte, ed e' lo stesso titolo. Convertire per un controllo diagnostico
         # vorrebbe dire dipendere da un cambio: meglio saltare e dirlo.
