@@ -4,25 +4,25 @@ Fa crescere il listino da solo, con quello che le dashboard chiedono davvero.
 
 Gira PRIMA di aggiorna.py: legge dal worker gli strumenti che qualcuno ha cercato e
 che il listino non copriva, e promuove in config/strumenti.json quelli che superano
-i filtri. Da l√¨ in poi ci pensa aggiorna.py: lo strumento entra nel listino e il
-worker non serve pi√π per quello.
+i filtri. Da lì in poi ci pensa aggiorna.py: lo strumento entra nel listino e il
+worker non serve più per quello.
 
-Perch√© i filtri (senza, basterebbe un codice digitato male per sporcare il listino):
+Perché i filtri (senza, basterebbe un codice digitato male per sporcare il listino):
 - richiesto in almeno DUE giorni distinti: un errore di battitura si fa una volta;
 - deve avere un prezzo ADESSO: se non quota da nessuna parte non entra, e resta
-  parcheggiato nel registro finch√© non matura;
+  parcheggiato nel registro finché non matura;
 - massimo 20 promozioni per corsa: un tetto contro il flooding.
 
 Nessuna dipendenza esterna, come aggiorna.py: solo libreria standard.
-Se il worker non risponde lo script esce in silenzio con successo ‚Äî l'aggiornamento
-dei prezzi non deve fermarsi perch√© il sensore √® gi√π.
+Se il worker non risponde lo script esce in silenzio con successo — l'aggiornamento
+dei prezzi non deve fermarsi perché il sensore è giù.
 """
 
 import json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timezone
 
 # Stessa forma riconosciuta dal worker: due lettere di paese, nove alfanumerici, una
-# cifra di controllo. Serve un controllo stretto perch√© tutto ci√≤ che non √® un ISIN
+# cifra di controllo. Serve un controllo stretto perché tutto ciò che non è un ISIN
 # viene preso per un ticker, e un codice storpiato entrerebbe nel listino come tale.
 ISIN = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 
@@ -93,7 +93,7 @@ def leggi(percorso, vuoto):
 
 
 def salva(percorso, dati):
-    """Scrittura atomica: un'interruzione a met√† non deve lasciare un file monco."""
+    """Scrittura atomica: un'interruzione a metà non deve lasciare un file monco."""
     tmp = percorso + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(dati, f, ensure_ascii=False, indent=1, sort_keys=True)
@@ -120,13 +120,13 @@ def da_francoforte(isin):
 
     Serve a due cose che Yahoo non sa fare: conosce le obbligazioni europee (Yahoo
     no, provati 5 ISIN reali il 20/08/2026, 0 su 5) e dice se il titolo quota in
-    percentuale del nominale, cio√® se √® un bond. Senza quest'ultima informazione il
+    percentuale del nominale, cioè se è un bond. Senza quest'ultima informazione il
     tipo veniva scritto "etf" a caso, e un bond marchiato etf manda aggiorna.py a
     interrogare Yahoo per un titolo che Yahoo non ha.
 
-    Non solleva mai: se tace si torna a Yahoo, cio√® al comportamento precedente.
-    Nota: provata dagli IP di Cloudflare, non ancora da quelli di GitHub Actions ‚Äî
-    se qui blocca, il registro della corsa lo dir√† e si resta su Yahoo.
+    Non solleva mai: se tace si torna a Yahoo, cioè al comportamento precedente.
+    Nota: provata dagli IP di Cloudflare, non ancora da quelli di GitHub Actions —
+    se qui blocca, il registro della corsa lo dirà e si resta su Yahoo.
     """
     try:
         d = http("https://api.boerse-frankfurt.de/v1/data/quote_box/single?isin="
@@ -136,14 +136,14 @@ def da_francoforte(isin):
     p = d.get("lastPrice") if isinstance(d, dict) else None
     if not isinstance(p, (int, float)) or p <= 0:
         return None, None, None
-    # XFRA quota tutto in euro, titoli esteri compresi: la valuta √® nota per costruzione.
+    # XFRA quota tutto in euro, titoli esteri compresi: la valuta è nota per costruzione.
     return p, "EUR", ("bond" if d.get("nominal") is True else None)
 
 
 def cerca_simbolo(chiave):
     """Stessa preferenza di aggiorna.py: prima Milano, poi le altre piazze europee."""
     if not ISIN.match(chiave):
-        # Non √® un ISIN: o √® un ticker scritto a mano nella dashboard, o √® un codice
+        # Non è un ISIN: o è un ticker scritto a mano nella dashboard, o è un codice
         # storpiato. Si accetta come ticker solo se ha la forma di un ticker; la
         # prova del prezzo, subito dopo, scarta comunque quelli inventati.
         return chiave if re.match(r"^[A-Z0-9]{1,6}(\.[A-Z]{1,3})?$", chiave) else None
@@ -171,7 +171,7 @@ def main():
     try:
         pendenti = http(f"{WORKER}/pending?token={urllib.parse.quote(TOKEN)}")
     except Exception as e:                           # noqa: BLE001
-        # Il sensore gi√π non deve fermare i prezzi: si riprova alla corsa dopo.
+        # Il sensore giù non deve fermare i prezzi: si riprova alla corsa dopo.
         print(f"Registro non raggiungibile ({_senza_token(e)}): salto l'autoespansione.")
         return 0
 
@@ -201,16 +201,16 @@ def main():
             continue
 
         if isin in noti:
-            # Gi√† in lista (o gi√† dismesso): la richiesta ha fatto il suo lavoro.
+            # Già in lista (o già dismesso): la richiesta ha fatto il suo lavoro.
             trattati.append(isin)
-            print(f"  --  {isin:14} gi√† noto")
+            print(f"  --  {isin:14} già noto")
             continue
 
         # Due giorni distinti: le date di prima e ultima richiesta devono differire.
         if v.get("primo") == v.get("ultimo") or (v.get("conta") or 0) < GIORNI_MINIMI:
             if _eta_giorni(v, oggi_data) >= SCADENZA_GIORNI:
                 trattati.append(isin)
-                print(f"  üóë  {_maschera(isin):14} mai un secondo giorno in {SCADENZA_GIORNI}g, scartato")
+                print(f"  🗑  {_maschera(isin):14} mai un secondo giorno in {SCADENZA_GIORNI}g, scartato")
             else:
                 print(f"  ..  {_maschera(isin):14} chiesto una volta sola, aspetta")
             continue
@@ -245,18 +245,18 @@ def main():
                 time.sleep(0.7)
             sim = sim or ""
             # Stesso strumento gia' coperto sotto un'altra chiave: e' il caso di
-            # "ENEL.MI" contro "BIT:ENEL". Si segna come trattato ‚Äî la richiesta ha
-            # avuto la sua risposta ‚Äî ma non si aggiunge una seconda voce.
+            # "ENEL.MI" contro "BIT:ENEL". Si segna come trattato — la richiesta ha
+            # avuto la sua risposta — ma non si aggiunge una seconda voce.
             if sim and sim.upper() in ticker_noti:
                 trattati.append(isin)
                 print(f"  --  {isin:14} gia' coperto da {sim}, non duplico")
                 continue
         except Exception as e:                       # noqa: BLE001
-            # Un titolo che non quota oggi pu√≤ quotare domani: non si scarta subito.
+            # Un titolo che non quota oggi può quotare domani: non si scarta subito.
             # Solo dopo SCADENZA_GIORNI senza mai un prezzo valido si arrende.
             if _eta_giorni(v, oggi_data) >= SCADENZA_GIORNI:
                 trattati.append(isin)
-                print(f"  üóë  {_maschera(isin):14} mai un prezzo in {SCADENZA_GIORNI}g, scartato")
+                print(f"  🗑  {_maschera(isin):14} mai un prezzo in {SCADENZA_GIORNI}g, scartato")
             else:
                 print(f"  ERR {_maschera(isin):14} {e}")
             continue
@@ -276,7 +276,7 @@ def main():
         noti.add(isin)
         promossi.append(isin)
         trattati.append(isin)
-        print(f"  OK  {isin:14} {(sim or '‚Äî'):14} {p} {ccy}  ‚Üí promosso come {tipo or 'etf'}")
+        print(f"  OK  {isin:14} {(sim or '—'):14} {p} {ccy}  → promosso come {tipo or 'etf'}")
 
     if promossi:
         salva(CONFIG, strumenti)
@@ -284,7 +284,7 @@ def main():
     else:
         print("\nNessuna promozione in questa corsa.")
 
-    # Si pulisce SOLO ci√≤ che √® stato davvero trattato: quello che aspetta ancora
+    # Si pulisce SOLO ciò che è stato davvero trattato: quello che aspetta ancora
     # deve restare, altrimenti il conteggio dei giorni distinti riparte da zero.
     if trattati:
         try:
@@ -292,9 +292,9 @@ def main():
                  dati={"isin": trattati})
             print(f"Registro ripulito di {len(trattati)} voci.")
         except Exception as e:                       # noqa: BLE001
-            # Non √® grave: alla prossima corsa si ritrovano e vengono saltati come
-            # "gi√† noti". Meglio una voce di troppo che una richiesta persa.
-            print(f"Pulizia del registro fallita ({_senza_token(e)}): si riprover√†.")
+            # Non è grave: alla prossima corsa si ritrovano e vengono saltati come
+            # "già noti". Meglio una voce di troppo che una richiesta persa.
+            print(f"Pulizia del registro fallita ({_senza_token(e)}): si riproverà.")
 
     return 0
 
