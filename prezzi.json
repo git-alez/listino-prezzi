@@ -1,9 +1,12 @@
 {
- "aggiornato_al": "2026-08-20T21:37:45+00:00",
+ "aggiornato_al": "2026-08-20T21:56:28+00:00",
  "fonti": {
   "bond": {
    "stato": "ok",
    "titoli": 1322
+  },
+  "controllo": {
+   "sospetti": 0
   },
   "francoforte": {
    "salvati": 0,
@@ -7765,14 +7768,6 @@
    "p": 99.61,
    "src": "stfi",
    "ytm": 3.09
-  },
-  "XS1372839214": {
-   "ccy": "EUR",
-   "d": "2026-08-18",
-   "dur": 0.01,
-   "p": 100.05,
-   "src": "stfi",
-   "ytm": -1.41
   },
   "XS1382696398": {
    "ccy": "EUR",
