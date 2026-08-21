@@ -33,6 +33,10 @@ MAX_ERRORI = 10
 # nessuno. Serve a scoprire il prezzo sbagliato di brutto, non la differenza di piazza.
 SCARTO_MAX = 3.0
 ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
+# Sotto questo numero di obbligazioni l'export non e' credibile e la corsa lo tratta
+# come un guasto. Il listino ne pubblica oltre milletrecento da sempre: cento e' un
+# pavimento larghissimo, scelto per non scattare mai su una giornata magra vera.
+MIN_BOND = 100
 
 # Pagina indice dell'export: i link contengono un hash che cambia, quindi non si
 # può cablarli. Si legge la pagina e si trova il link della riga giusta.
@@ -258,6 +262,18 @@ def main():
     print("\nObbligazioni (export EOD simpletoolsforinvestors):")
     try:
         bond = bond_da_stfi()
+        # Un export vuoto non solleva niente: l'intestazione c'e', le righe no. Senza
+        # questo controllo lo stato resterebbe "ok" e la purga in fondo troverebbe
+        # "non legittime" tutte e milletrecento le obbligazioni, cancellandole —
+        # esattamente il caso da cui la guardia laggiu' dovrebbe difendere. E non
+        # serve un guasto di rete per arrivarci: basta un file troncato, o un cambio
+        # di unita' del prezzo che faccia scartare ogni riga dal filtro 1..300.
+        # Sollevando qui si ricade sul ramo "errore" di sotto, che e' gia' scritto
+        # per questo: niente purga, restano i prezzi della corsa precedente.
+        if len(bond) < MIN_BOND:
+            raise RuntimeError(
+                f"solo {len(bond)} obbligazioni nell'export (soglia {MIN_BOND}): "
+                f"lo tratto come guasto della fonte, non come delisting di massa")
         chiavi_bond = set(bond)
         prezzi.update(bond)
         stato["bond"] = {"stato": "ok", "titoli": len(bond)}
