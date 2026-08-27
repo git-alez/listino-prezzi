@@ -105,5 +105,14 @@
   "nota": "aggiunto da richiesta utente",
   "ticker": "IWDA.L",
   "tipo": "etf"
+ },
+ {
+  "aggiunto": "auto",
+  "dal": "2026-08-27",
+  "errori_consecutivi": 0,
+  "isin": "IE00B4K48X80",
+  "nota": "aggiunto da richiesta utente",
+  "ticker": "IMAE.AS",
+  "tipo": "etf"
  }
 ]
