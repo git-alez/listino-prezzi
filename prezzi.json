@@ -1,5 +1,5 @@
 {
- "aggiornato_al": "2026-11-17T00:23:51+00:00",
+ "aggiornato_al": "2026-11-17T11:41:43+00:00",
  "fonti": {
   "bond": {
    "stato": "ok",
@@ -9,15 +9,14 @@
    "sospetti": 0
   },
   "francoforte": {
-   "salvati": 0,
-   "stato": "ok"
-  },
-  "non_aggiornati": 0,
-  "yahoo": {
-   "errori": 0,
    "ok": 10,
    "stato": "ok"
-  }
+  },
+  "justetf": {
+   "ok": 0,
+   "stato": "ok"
+  },
+  "non_aggiornati": 0
  },
  "prezzi": {
   "AT0000383864": {
@@ -519,15 +518,15 @@
   },
   "CH1199067674": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 14.052,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 13.948,
+   "src": "francoforte"
   },
   "CH1209763130": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 6.172,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 6.11,
+   "src": "francoforte"
   },
   "DE0001030708": {
    "ccy": "EUR",
@@ -3464,21 +3463,21 @@
   },
   "IE00B4K48X80": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 107.96,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 107.18,
+   "src": "francoforte"
   },
   "IE00B4L5Y983": {
-   "ccy": "USD",
-   "d": "2026-11-16",
-   "p": 143.07,
-   "src": "yahoo"
+   "ccy": "EUR",
+   "d": "2026-11-17",
+   "p": 128.765,
+   "src": "francoforte"
   },
   "IE00B4ND3602": {
-   "ccy": "USD",
-   "d": "2026-11-13",
-   "p": 79.5,
-   "src": "yahoo"
+   "ccy": "EUR",
+   "d": "2026-11-17",
+   "p": 68.045,
+   "src": "francoforte"
   },
   "IE00BDHDPR44": {
    "ccy": "EUR",
@@ -3489,9 +3488,9 @@
   },
   "IE00BFNM3J75": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 12.174,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 12.034,
+   "src": "francoforte"
   },
   "IE00BFZRPZ02": {
    "ccy": "EUR",
@@ -3529,10 +3528,10 @@
    "ytm": 0.0316
   },
   "IE00BJ5JNY98": {
-   "ccy": "USD",
-   "d": "2026-11-16",
-   "p": 18.804,
-   "src": "yahoo"
+   "ccy": "EUR",
+   "d": "2026-11-17",
+   "p": 16.856,
+   "src": "francoforte"
   },
   "IE00BKFVC345": {
    "ccy": "EUR",
@@ -3591,10 +3590,10 @@
    "ytm": 0.0356
   },
   "IE00BYZK4552": {
-   "ccy": "USD",
-   "d": "2026-11-16",
-   "p": 19.24,
-   "src": "yahoo"
+   "ccy": "EUR",
+   "d": "2026-11-17",
+   "p": 17.216,
+   "src": "francoforte"
   },
   "IT0000966017": {
    "ccy": "EUR",
@@ -3661,15 +3660,15 @@
   },
   "IT0003128367": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 9.755,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 9.647,
+   "src": "francoforte"
   },
   "IT0003132476": {
    "ccy": "EUR",
-   "d": "2026-11-16",
-   "p": 25.845,
-   "src": "yahoo"
+   "d": "2026-11-17",
+   "p": 25.7,
+   "src": "francoforte"
   },
   "IT0003256820": {
    "ccy": "EUR",
