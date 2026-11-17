@@ -1,118 +1,82 @@
 [
  {
-  "errori_consecutivi": 0,
   "isin": "IT0004923998",
   "nota": "BTP 4,75% 01/09/2044",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IT0005534141",
   "nota": "BTP 4,50% 01/10/2053",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "FR0010870956",
   "nota": "FRANCE 4,00% 25/04/2060",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "ES0000012M93",
   "nota": "SPAIN 4,00% 31/10/2054",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "XS2680932907",
   "nota": "HUNGARY 5,375% 12/09/2033",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "XS0161100515",
   "nota": "Telecom Italia Finance 7,75% 24/01/2033",
-  "ticker": "",
   "tipo": "bond"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IE00B4ND3602",
   "nota": "iShares Physical Gold ETC",
-  "ticker": "PHYMF",
   "tipo": "etc"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "CH1209763130",
   "nota": "21Shares Ethereum Core ETP",
-  "ticker": "CH1209763130.SG",
   "tipo": "etc"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "CH1199067674",
   "nota": "21Shares Bitcoin Core ETP",
-  "ticker": "CH1199067674.SG",
   "tipo": "etc"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IE00BJ5JNY98",
   "nota": "iShares MSCI World Information Technology",
-  "ticker": "WITS.AS",
   "tipo": "etf"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IE00BYZK4552",
   "nota": "iShares Automation & Robotics",
-  "ticker": "RBOT.L",
   "tipo": "etf"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IE00BFNM3J75",
   "nota": "iShares MSCI World Screened UCITS",
-  "ticker": "SNAW.DE",
   "tipo": "etf"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IT0003128367",
   "nota": "Enel",
-  "ticker": "ENEL.MI",
   "tipo": "azione"
  },
  {
-  "errori_consecutivi": 0,
   "isin": "IT0003132476",
   "nota": "Eni",
-  "ticker": "ENI.MI",
   "tipo": "azione"
  },
  {
-  "aggiunto": "auto",
-  "dal": "2026-08-16",
-  "errori_consecutivi": 0,
   "isin": "IE00B4L5Y983",
   "nota": "aggiunto da richiesta utente",
-  "ticker": "IWDA.L",
   "tipo": "etf"
  },
  {
-  "aggiunto": "auto",
-  "dal": "2026-08-27",
-  "errori_consecutivi": 0,
   "isin": "IE00B4K48X80",
   "nota": "aggiunto da richiesta utente",
-  "ticker": "IMAE.AS",
   "tipo": "etf"
  }
 ]
